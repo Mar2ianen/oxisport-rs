@@ -1,16 +1,22 @@
-//! Intervals.icu provider adapter (scaffold).
+//! Intervals.icu provider adapter.
 //!
-//! Status: scaffold only. Not implemented in milestone 0.
+//! Maps the Intervals.icu wire API into the normalized `oxisport-core`
+//! model:
 //!
-//! Planned responsibilities:
-//! - API-key authentication;
-//! - capabilities Intervals.icu actually supports, mapped into
-//!   `oxisport-core`;
-//! - conversion between `oxisport-intervals-raw` wire models and the
-//!   normalized model;
-//! - access to the raw client for Intervals.icu-specific operations.
+//! ```text
+//! Intervals.icu API -> raw wire client (oxisport-intervals-raw)
+//!                   -> adapter (this crate)
+//!                   -> oxisport_core::{Activity, Athlete}
+//! ```
 //!
-//! Planned dependencies once implemented: `oxisport-intervals-raw`,
-//! `oxisport-core`, `oxisport-runtime`.
+//! Authentication uses the personal API key from
+//! <https://intervals.icu/settings>, sent as the `X-API-KEY` header.
 //!
-//! API source: Intervals.icu API — https://intervals.icu/api/
+//! Implemented capabilities: [`AthleteSource`] and [`ActivitySource`].
+//! Activity-file upload is provider-specific and exposed directly on
+//! [`IntervalsProvider::upload_activity`].
+
+pub mod mapping;
+pub mod provider;
+
+pub use provider::{DEFAULT_BASE_URL, IntervalsConfig, IntervalsProvider};

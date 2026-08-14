@@ -1,0 +1,87 @@
+# Intervals.icu API specification.
+#
+# Consumed by oxisport-codegen via `cargo xtask codegen`.
+# API source: https://intervals.icu/api/v1/docs
+service: intervals
+
+base_url: https://intervals.icu/api/v1
+
+types:
+  - name: AthleteResponse
+    fields:
+      - name: id
+        type: uint64
+      - name: first_name
+        type: string
+        optional: true
+      - name: last_name
+        type: string
+        optional: true
+      - name: display_name
+        type: string
+        optional: true
+
+  - name: ActivitySummary
+    fields:
+      - name: id
+        type: string
+      - name: name
+        type: string
+        optional: true
+      - name: type
+        type: string
+      - name: start_date_local
+        type: string
+      - name: distance
+        type: f64
+        optional: true
+      - name: moving_time
+        type: uint32
+        optional: true
+      - name: elapsed_time
+        type: uint32
+        optional: true
+      - name: average_heartrate
+        type: f64
+        optional: true
+      - name: average_watts
+        type: f64
+        optional: true
+      - name: average_cadence
+        type: f64
+        optional: true
+
+endpoints:
+  - name: get_athlete
+    method: GET
+    path: /athlete/{id}
+    path_params:
+      - name: id
+        type: uint64
+    response: AthleteResponse
+
+  - name: list_activities
+    method: GET
+    path: /athlete/{id}/activities
+    path_params:
+      - name: id
+        type: uint64
+    query_params:
+      - name: oldest
+        type: string
+        optional: true
+      - name: newest
+        type: string
+        optional: true
+      - name: limit
+        type: uint32
+        optional: true
+    response: list<ActivitySummary>
+
+  - name: get_activity
+    method: GET
+    path: /activity/{id}
+    path_params:
+      - name: id
+        type: string
+    response: ActivitySummary
