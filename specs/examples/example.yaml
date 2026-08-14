@@ -1,0 +1,47 @@
+# OxiSport example (mock) service specification.
+#
+# Consumed by oxisport-codegen via `cargo xtask codegen`.
+# Proves the pipeline: YAML spec -> IR -> generated raw client.
+service: example
+
+base_url: https://example.invalid
+
+types:
+  - name: ActivityResponse
+    fields:
+      - name: id
+        type: string
+      - name: name
+        type: string
+        optional: true
+      - name: sport
+        type: string
+      - name: start_time
+        type: string
+      - name: distance_meters
+        type: uint64
+      - name: duration_seconds
+        type: uint64
+      - name: average_heart_rate
+        type: uint16
+        optional: true
+      - name: average_power
+        type: uint16
+        optional: true
+      - name: average_cadence
+        type: uint16
+        optional: true
+
+endpoints:
+  - name: get_activity
+    method: GET
+    path: /activities/{id}
+    path_params:
+      - name: id
+        type: string
+    response: ActivityResponse
+
+  - name: list_activities
+    method: GET
+    path: /activities
+    response: list<ActivityResponse>

@@ -1,0 +1,15 @@
+[package]
+name = "oxisport-codegen"
+description = "OxiSport raw client code generator (custom YAML spec -> IR -> Rust)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_yaml = { workspace = true }
+thiserror = { workspace = true }
+
+[lints]
+workspace = true

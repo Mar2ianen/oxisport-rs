@@ -1,0 +1,17 @@
+[package]
+name = "oxisport-core"
+description = "OxiSport normalized domain model and capability traits"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+async-trait = { workspace = true }
+chrono = { workspace = true }
+futures-core = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+
+[lints]
+workspace = true
