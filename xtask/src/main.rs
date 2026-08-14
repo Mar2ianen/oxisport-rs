@@ -16,10 +16,16 @@ use anyhow::{Context, Result, bail};
 use clap::{Parser, Subcommand};
 
 /// (spec path, generated output path) pairs relative to the workspace root.
-const TARGETS: &[(&str, &str)] = &[(
-    "specs/examples/example.yaml",
-    "crates/providers/example/oxisport-example-raw/src/generated.rs",
-)];
+const TARGETS: &[(&str, &str)] = &[
+    (
+        "specs/examples/example.yaml",
+        "crates/providers/example/oxisport-example-raw/src/generated.rs",
+    ),
+    (
+        "specs/intervals/intervals.yaml",
+        "crates/providers/intervals/oxisport-intervals-raw/src/generated.rs",
+    ),
+];
 
 #[derive(Parser)]
 #[command(name = "xtask", about = "OxiSport development tasks")]

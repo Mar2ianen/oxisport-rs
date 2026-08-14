@@ -44,6 +44,8 @@ pub struct Endpoint {
     pub path: String,
     /// Path parameters.
     pub path_params: Vec<FieldDef>,
+    /// Query parameters.
+    pub query_params: Vec<FieldDef>,
     /// Response type, when the endpoint returns a body.
     pub response: Option<WireType>,
 }

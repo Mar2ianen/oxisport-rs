@@ -1,7 +1,7 @@
 //! Streaming-friendly upload bodies.
 
 use std::io;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::pin::Pin;
 
 use bytes::Bytes;
@@ -183,5 +183,70 @@ impl From<String> for MediaType {
 impl std::fmt::Display for MediaType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.0)
+    }
+}
+
+/// A `multipart/form-data` body being built for an upload.
+///
+/// Wraps the underlying HTTP stack so providers do not depend on it
+/// directly. The `Content-Type` (including the boundary) is generated
+/// automatically at send time.
+#[derive(Debug)]
+pub struct MultipartForm {
+    form: reqwest::multipart::Form,
+}
+
+impl MultipartForm {
+    /// Creates an empty form.
+    pub fn new() -> Self {
+        Self {
+            form: reqwest::multipart::Form::new(),
+        }
+    }
+
+    /// Adds a text field.
+    #[must_use]
+    pub fn text(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
+        self.form = self.form.text(name.into(), value.into());
+        self
+    }
+
+    /// Adds a file field, streaming the file from disk at send time.
+    ///
+    /// The remote `filename` is derived from the path. Returns an error if
+    /// the file cannot be opened.
+    pub async fn file(
+        mut self,
+        name: impl Into<String>,
+        path: impl AsRef<Path>,
+    ) -> io::Result<Self> {
+        let part = reqwest::multipart::Part::file(path.as_ref().to_path_buf()).await?;
+        self.form = self.form.part(name.into(), part);
+        Ok(self)
+    }
+
+    /// Adds a file field from in-memory bytes with an explicit filename.
+    #[must_use]
+    pub fn bytes(
+        mut self,
+        name: impl Into<String>,
+        filename: impl Into<String>,
+        bytes: impl Into<Bytes>,
+    ) -> Self {
+        let part =
+            reqwest::multipart::Part::bytes(bytes.into().to_vec()).file_name(filename.into());
+        self.form = self.form.part(name.into(), part);
+        self
+    }
+
+    /// Consumes the form, handing it to the HTTP stack.
+    pub fn into_reqwest_form(self) -> reqwest::multipart::Form {
+        self.form
+    }
+}
+
+impl Default for MultipartForm {
+    fn default() -> Self {
+        Self::new()
     }
 }

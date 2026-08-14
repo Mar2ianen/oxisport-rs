@@ -22,7 +22,7 @@ pub mod client;
 pub mod response;
 pub mod util;
 
-pub use body::{ContentLength, MediaType, UploadBody};
+pub use body::{ContentLength, MediaType, MultipartForm, UploadBody};
 pub use client::{Client, ClientBuilder, ClientConfig, RequestBuilder};
 pub use response::{DownloadStream, Response};
 

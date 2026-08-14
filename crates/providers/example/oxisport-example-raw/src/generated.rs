@@ -27,8 +27,8 @@ pub struct ActivityResponse {
 
 #[derive(Debug, Clone)]
 pub struct ExampleClient {
-    client: oxisport_runtime::Client,
-    base_url: url::Url,
+    pub(crate) client: oxisport_runtime::Client,
+    pub(crate) base_url: url::Url,
 }
 
 impl ExampleClient {
@@ -49,9 +49,10 @@ impl ExampleClient {
         let url = self.base_url.join(&path).map_err(|e| {
             oxisport_core::Error::invalid_request(format!("invalid request URL: {e}"))
         })?;
-        let response = self
+        let request = self
             .client
-            .request(oxisport_runtime::http::Method::GET, url)
+            .request(oxisport_runtime::http::Method::GET, url);
+        let response = request
             .send()
             .await
             .map_err(|e| e.with_provider("example"))?;
@@ -66,9 +67,10 @@ impl ExampleClient {
         let url = self.base_url.join(&path).map_err(|e| {
             oxisport_core::Error::invalid_request(format!("invalid request URL: {e}"))
         })?;
-        let response = self
+        let request = self
             .client
-            .request(oxisport_runtime::http::Method::GET, url)
+            .request(oxisport_runtime::http::Method::GET, url);
+        let response = request
             .send()
             .await
             .map_err(|e| e.with_provider("example"))?;

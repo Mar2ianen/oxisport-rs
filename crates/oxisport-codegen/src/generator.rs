@@ -42,6 +42,10 @@ pub fn generate(api: &Api, source: &str, generator_version: &str) -> String {
         wln!(out);
     }
 
+    for endpoint in &api.endpoints {
+        emit_query_struct(&mut out, endpoint);
+    }
+
     emit_client(&mut out, &client_name, &api.service, api);
     out
 }
@@ -56,7 +60,12 @@ fn emit_struct(out: &mut String, ty: &crate::ir::TypeDef) {
         if field.optional {
             wln!(out, "    #[serde(default)]");
         }
-        wln!(out, "    pub {}: {},", field.name, field_type(field));
+        wln!(
+            out,
+            "    pub {}: {},",
+            rust_ident(&field.name),
+            field_type(field)
+        );
     }
     wln!(out, "}}");
 }
@@ -64,8 +73,8 @@ fn emit_struct(out: &mut String, ty: &crate::ir::TypeDef) {
 fn emit_client(out: &mut String, client_name: &str, service: &str, api: &Api) {
     wln!(out, "#[derive(Debug, Clone)]");
     wln!(out, "pub struct {client_name} {{");
-    wln!(out, "    client: oxisport_runtime::Client,");
-    wln!(out, "    base_url: url::Url,");
+    wln!(out, "    pub(crate) client: oxisport_runtime::Client,");
+    wln!(out, "    pub(crate) base_url: url::Url,");
     wln!(out, "}}");
     wln!(out);
     wln!(out, "impl {client_name} {{");
@@ -92,17 +101,20 @@ fn emit_endpoint(out: &mut String, service: &str, endpoint: &Endpoint) {
         .as_ref()
         .map(rust_type)
         .unwrap_or_else(|| "()".to_string());
-    let params = if endpoint.path_params.is_empty() {
+    let mut params: Vec<String> = endpoint
+        .path_params
+        .iter()
+        .map(|p| format!("{}: {}", p.name, path_param_type(p)))
+        .collect();
+    for p in &endpoint.query_params {
+        params.push(format!("{}: {}", p.name, query_param_type(p)));
+    }
+    let params = if params.is_empty() {
         String::new()
     } else {
-        let joined = endpoint
-            .path_params
-            .iter()
-            .map(|p| format!("{}: {}", p.name, path_param_type(p)))
-            .collect::<Vec<_>>()
-            .join(", ");
-        format!(", {joined}")
+        format!(", {}", params.join(", "))
     };
+    let query_struct = query_struct_name(&endpoint.name);
 
     wln!(
         out,
@@ -141,7 +153,24 @@ fn emit_endpoint(out: &mut String, service: &str, endpoint: &Endpoint) {
     );
     wln!(
         out,
-        "        let response = self.client.request(oxisport_runtime::http::Method::{method}, url).send().await.map_err(|e| e.with_provider({service:?}))?;"
+        "        let request = self.client.request(oxisport_runtime::http::Method::{method}, url);"
+    );
+    if !endpoint.query_params.is_empty() {
+        wln!(
+            out,
+            "        let query = {query_struct} {{ {} }};",
+            endpoint
+                .query_params
+                .iter()
+                .map(|p| format!("{}: {}", p.name, query_field_init(p)))
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+        wln!(out, "        let request = request.query(&query);");
+    }
+    wln!(
+        out,
+        "        let response = request.send().await.map_err(|e| e.with_provider({service:?}))?;"
     );
     if endpoint.response.is_some() {
         wln!(out, "        response.json().await");
@@ -152,11 +181,74 @@ fn emit_endpoint(out: &mut String, service: &str, endpoint: &Endpoint) {
     wln!(out, "    }}");
 }
 
+/// Emits a serializable query struct for an endpoint with query parameters.
+fn emit_query_struct(out: &mut String, endpoint: &Endpoint) {
+    if endpoint.query_params.is_empty() {
+        return;
+    }
+    let name = query_struct_name(&endpoint.name);
+    wln!(out, "#[derive(Debug, Clone, serde::Serialize)]");
+    wln!(out, "pub struct {name} {{");
+    for param in &endpoint.query_params {
+        if param.optional {
+            wln!(
+                out,
+                "    #[serde(skip_serializing_if = \"Option::is_none\")]"
+            );
+        }
+        let base = rust_type(&param.ty);
+        let ty = if param.optional {
+            format!("Option<{base}>")
+        } else {
+            base
+        };
+        wln!(out, "    pub {}: {},", rust_ident(&param.name), ty);
+    }
+    wln!(out, "}}");
+    wln!(out);
+}
+
+fn query_struct_name(endpoint_name: &str) -> String {
+    let mut parts = endpoint_name.split('_').peekable();
+    let mut out = String::new();
+    for part in parts.by_ref() {
+        if !part.is_empty() {
+            out.push_str(&upper_camel(part));
+        }
+    }
+    if out.is_empty() {
+        out.push_str("Query");
+    }
+    format!("{out}Query")
+}
+
 fn path_param_type(field: &FieldDef) -> String {
     if field.ty == WireType::String {
         "&str".to_string()
     } else {
         rust_type(&field.ty)
+    }
+}
+
+fn query_param_type(field: &FieldDef) -> String {
+    let base = if field.ty == WireType::String {
+        "&str".to_string()
+    } else {
+        rust_type(&field.ty)
+    };
+    if field.optional {
+        format!("Option<{base}>")
+    } else {
+        base
+    }
+}
+
+/// Expression converting a function argument into the query struct field.
+fn query_field_init(field: &FieldDef) -> String {
+    if field.optional {
+        format!("{}.map(Into::into)", field.name)
+    } else {
+        format!("{}.into()", field.name)
     }
 }
 
@@ -195,6 +287,24 @@ fn upper_camel(name: &str) -> String {
     }
 }
 
+/// Rust keywords that need raw-identifier escaping in field positions.
+const RUST_KEYWORDS: &[&str] = &[
+    "as", "break", "const", "continue", "crate", "else", "enum", "extern", "false", "fn", "for",
+    "if", "impl", "in", "let", "loop", "match", "mod", "move", "mut", "pub", "ref", "return",
+    "self", "Self", "static", "struct", "super", "trait", "true", "type", "unsafe", "use", "where",
+    "while", "async", "await", "dyn", "abstract", "become", "box", "do", "final", "macro",
+    "override", "priv", "typeof", "unsized", "virtual", "yield", "try",
+];
+
+/// Returns the Rust identifier for a spec name, escaping keywords.
+fn rust_ident(name: &str) -> String {
+    if RUST_KEYWORDS.contains(&name) {
+        format!("r#{name}")
+    } else {
+        name.to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::generate;
@@ -222,6 +332,12 @@ endpoints:
   - name: list_activities
     method: GET
     path: /activities
+    query_params:
+      - name: oldest
+        type: string
+        optional: true
+      - name: limit
+        type: uint32
     response: list<ActivityResponse>
   - name: ping
     method: HEAD
@@ -254,7 +370,15 @@ endpoints:
         assert!(code.contains("let path = format!(\"/activities/{id}\", id = oxisport_runtime::util::encode_path_segment(&id.to_string()));"));
         assert!(code.contains("oxisport_runtime::http::Method::GET"));
         assert!(code.contains("e.with_provider(\"example\")"));
-        assert!(code.contains("pub async fn list_activities(&self)"));
+        assert!(
+            code.contains("pub async fn list_activities(&self, oldest: Option<&str>, limit: u32)")
+        );
+        assert!(code.contains("pub struct ListActivitiesQuery {"));
+        assert!(code.contains("#[serde(skip_serializing_if = \"Option::is_none\")]"));
+        assert!(code.contains("pub oldest: Option<String>,"));
+        assert!(code.contains("pub limit: u32,"));
+        assert!(code.contains("let query = ListActivitiesQuery { oldest: oldest.map(Into::into), limit: limit.into() };"));
+        assert!(code.contains("let request = request.query(&query);"));
         assert!(code.contains("pub async fn ping(&self)"));
     }
 

@@ -4,9 +4,9 @@ use std::time::Duration;
 
 use bytes::Bytes;
 use futures_util::TryStreamExt;
-use oxisport_runtime::{Client, ContentLength, Error, MediaType, UploadBody};
+use oxisport_runtime::{Client, ContentLength, Error, MediaType, MultipartForm, UploadBody};
 use serde_json::{Value, json};
-use wiremock::matchers::{body_bytes, header, method, path};
+use wiremock::matchers::{body_bytes, body_string_contains, header, method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 fn client() -> Client {
@@ -191,6 +191,47 @@ async fn uploads_byte_stream_chunked() {
         .send()
         .await
         .expect("upload succeeds");
+}
+
+#[tokio::test]
+async fn uploads_multipart_form() {
+    let file = temp_file("multipart", b"fit-bytes").await;
+    let form = MultipartForm::new()
+        .text("name", "Morning ride")
+        .file("file", &file)
+        .await
+        .expect("file opens");
+
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/upload"))
+        .and(body_string_contains("fit-bytes"))
+        .and(body_string_contains("name"))
+        .respond_with(ResponseTemplate::new(201))
+        .mount(&server)
+        .await;
+
+    let url = format!("{}/upload", server.uri()).parse().unwrap();
+    let response = client()
+        .post(url)
+        .multipart(form)
+        .send()
+        .await
+        .expect("multipart upload succeeds");
+    assert_eq!(response.status(), 201);
+
+    let received = server.received_requests().await.expect("request received");
+    let content_type = received[0]
+        .headers
+        .get("content-type")
+        .and_then(|value| value.to_str().ok())
+        .expect("content-type header present");
+    assert!(
+        content_type.starts_with("multipart/form-data; boundary="),
+        "unexpected content type: {content_type}"
+    );
+
+    let _ = tokio::fs::remove_file(file).await;
 }
 
 async fn temp_file(name: &str, content: &[u8]) -> std::path::PathBuf {

@@ -70,6 +70,9 @@ pub struct RawEndpoint {
     /// Path parameters.
     #[serde(default)]
     pub path_params: Vec<RawField>,
+    /// Query parameters.
+    #[serde(default)]
+    pub query_params: Vec<RawField>,
     /// Response type string.
     #[serde(default)]
     pub response: Option<String>,
@@ -129,6 +132,15 @@ fn convert(raw: RawSpec) -> Result<Api> {
                 optional: p.optional,
             });
         }
+        let mut query_params = Vec::with_capacity(e.query_params.len());
+        for p in &e.query_params {
+            validate_identifier(&p.name)?;
+            query_params.push(FieldDef {
+                name: p.name.clone(),
+                ty: parse_wire_type(&p.ty, &known_types)?,
+                optional: p.optional,
+            });
+        }
         let response = match &e.response {
             Some(r) => Some(parse_wire_type(r, &known_types)?),
             None => None,
@@ -138,6 +150,7 @@ fn convert(raw: RawSpec) -> Result<Api> {
             method,
             path: e.path.clone(),
             path_params,
+            query_params,
             response,
         });
     }
@@ -243,6 +256,12 @@ endpoints:
   - name: list_activities
     method: GET
     path: /activities
+    query_params:
+      - name: oldest
+        type: string
+        optional: true
+      - name: limit
+        type: uint32
     response: list<ActivityResponse>
 "#,
         )
@@ -278,6 +297,13 @@ endpoints:
                 "ActivityResponse".into()
             ))))
         );
+        assert_eq!(list.query_params.len(), 2);
+        assert_eq!(list.query_params[0].name, "oldest");
+        assert_eq!(list.query_params[0].ty, WireType::String);
+        assert!(list.query_params[0].optional);
+        assert_eq!(list.query_params[1].name, "limit");
+        assert_eq!(list.query_params[1].ty, WireType::U32);
+        assert!(!list.query_params[1].optional);
     }
 
     #[test]
