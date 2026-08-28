@@ -44,12 +44,14 @@ impl Response {
 
     /// Deserializes the response body as JSON.
     pub async fn json<T: DeserializeOwned>(self) -> Result<T> {
-        let result = self.inner.json::<T>().await;
-        match result {
-            Ok(value) => Ok(value),
-            Err(error) if error.is_decode() => Err(Error::serialization(error)),
-            Err(error) => Err(Error::transport(error)),
-        }
+        let body = self.inner.bytes().await.map_err(Error::transport)?;
+        serde_json::from_slice(&body).map_err(|error| {
+            let preview = String::from_utf8_lossy(&body[..body.len().min(200)]);
+            Error::serialization(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!("{error}; response prefix: {preview:?}"),
+            ))
+        })
     }
 
     /// Buffers the whole response body into memory.

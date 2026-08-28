@@ -25,8 +25,10 @@ rust-version = "1.85"
 [workspace.dependencies]
 anyhow = "1"
 async-trait = "0.1"
+base64 = "0.22"
 bytes = "1"
 chrono = "0.4"
+csv = "1"
 clap = { version = "4", features = ["derive"] }
 futures-core = "0.3"
 futures-util = "0.3"

@@ -127,8 +127,9 @@ fn emit_endpoint(out: &mut String, service: &str, endpoint: &Endpoint) {
         endpoint.name,
     );
 
+    let request_path = endpoint.path.strip_prefix('/').unwrap_or(&endpoint.path);
     if endpoint.path_params.is_empty() {
-        wln!(out, "        let path = {:?};", endpoint.path);
+        wln!(out, "        let path = {:?};", request_path);
     } else {
         let args = endpoint
             .path_params
@@ -144,7 +145,7 @@ fn emit_endpoint(out: &mut String, service: &str, endpoint: &Endpoint) {
         wln!(
             out,
             "        let path = format!({:?}, {args});",
-            endpoint.path
+            request_path
         );
     }
     wln!(
@@ -367,7 +368,7 @@ endpoints:
         assert!(code.contains("pub distance_meters: Option<u64>,"));
         assert!(code.contains("pub struct ExampleClient {"));
         assert!(code.contains("pub async fn get_activity(&self, id: &str)"));
-        assert!(code.contains("let path = format!(\"/activities/{id}\", id = oxisport_runtime::util::encode_path_segment(&id.to_string()));"));
+        assert!(code.contains("let path = format!(\"activities/{id}\", id = oxisport_runtime::util::encode_path_segment(&id.to_string()));"));
         assert!(code.contains("oxisport_runtime::http::Method::GET"));
         assert!(code.contains("e.with_provider(\"example\")"));
         assert!(

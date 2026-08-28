@@ -42,14 +42,14 @@ pub fn activity(provider: &ProviderId, raw: ActivitySummary) -> Activity {
 pub fn athlete(provider: &ProviderId, raw: AthleteResponse) -> Athlete {
     let name = raw
         .display_name
-        .or_else(|| match (raw.first_name, raw.last_name) {
+        .or_else(|| match (raw.firstname, raw.lastname) {
             (Some(first), Some(last)) => Some(format!("{first} {last}")),
             (Some(first), None) => Some(first),
             (None, Some(last)) => Some(last),
             (None, None) => None,
         });
     Athlete {
-        id: RemoteId::new(raw.id.to_string()),
+        id: RemoteId::new(raw.id),
         provider: provider.clone(),
         name,
     }
@@ -191,9 +191,9 @@ mod tests {
     fn maps_athlete_with_display_name() {
         let raw: AthleteResponse = serde_json::from_str(
             r#"{
-                "id": 2049151,
-                "first_name": "John",
-                "last_name": "Doe",
+                "id": "i2049151",
+                "firstname": "John",
+                "lastname": "Doe",
                 "display_name": "jdoe"
             }"#,
         )
@@ -201,7 +201,7 @@ mod tests {
 
         let mapped = athlete(&ProviderId::new("intervals"), raw);
 
-        assert_eq!(mapped.id.as_str(), "2049151");
+        assert_eq!(mapped.id.as_str(), "i2049151");
         assert_eq!(mapped.name.as_deref(), Some("jdoe"));
     }
 
@@ -209,24 +209,26 @@ mod tests {
     fn maps_athlete_without_display_name() {
         let raw: AthleteResponse = serde_json::from_str(
             r#"{
-                "id": 7,
-                "first_name": "John",
-                "last_name": "Doe"
+                "id": "i7",
+                "firstname": "John",
+                "lastname": "Doe"
             }"#,
         )
         .expect("parses fixture");
 
         let mapped = athlete(&ProviderId::new("intervals"), raw);
 
+        assert_eq!(mapped.id.as_str(), "i7");
         assert_eq!(mapped.name.as_deref(), Some("John Doe"));
     }
 
     #[test]
     fn maps_anonymous_athlete() {
-        let raw: AthleteResponse = serde_json::from_str(r#"{"id": 7}"#).expect("parses fixture");
+        let raw: AthleteResponse = serde_json::from_str(r#"{"id": "i7"}"#).expect("parses fixture");
 
         let mapped = athlete(&ProviderId::new("intervals"), raw);
 
+        assert_eq!(mapped.id.as_str(), "i7");
         assert_eq!(mapped.name, None);
     }
 }

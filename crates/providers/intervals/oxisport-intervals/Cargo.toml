@@ -14,9 +14,12 @@ futures-util = { workspace = true }
 oxisport-core = { workspace = true }
 oxisport-intervals-raw = { path = "../oxisport-intervals-raw" }
 oxisport-runtime = { workspace = true }
+csv = { workspace = true }
+serde_json = { workspace = true }
 url = { workspace = true }
 
 [dev-dependencies]
+base64 = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 wiremock = { workspace = true }

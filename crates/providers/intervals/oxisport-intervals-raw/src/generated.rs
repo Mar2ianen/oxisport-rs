@@ -10,11 +10,11 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AthleteResponse {
-    pub id: u64,
+    pub id: String,
     #[serde(default)]
-    pub first_name: Option<String>,
+    pub firstname: Option<String>,
     #[serde(default)]
-    pub last_name: Option<String>,
+    pub lastname: Option<String>,
     #[serde(default)]
     pub display_name: Option<String>,
 }
@@ -65,10 +65,10 @@ impl IntervalsClient {
     /// Executes `GET /athlete/{id}`.
     pub async fn get_athlete(
         &self,
-        id: u64,
+        id: &str,
     ) -> std::result::Result<AthleteResponse, oxisport_core::Error> {
         let path = format!(
-            "/athlete/{id}",
+            "athlete/{id}",
             id = oxisport_runtime::util::encode_path_segment(&id.to_string())
         );
         let url = self.base_url.join(&path).map_err(|e| {
@@ -87,13 +87,13 @@ impl IntervalsClient {
     /// Executes `GET /athlete/{id}/activities`.
     pub async fn list_activities(
         &self,
-        id: u64,
+        id: &str,
         oldest: Option<&str>,
         newest: Option<&str>,
         limit: Option<u32>,
     ) -> std::result::Result<Vec<ActivitySummary>, oxisport_core::Error> {
         let path = format!(
-            "/athlete/{id}/activities",
+            "athlete/{id}/activities",
             id = oxisport_runtime::util::encode_path_segment(&id.to_string())
         );
         let url = self.base_url.join(&path).map_err(|e| {
@@ -121,7 +121,7 @@ impl IntervalsClient {
         id: &str,
     ) -> std::result::Result<ActivitySummary, oxisport_core::Error> {
         let path = format!(
-            "/activity/{id}",
+            "activity/{id}",
             id = oxisport_runtime::util::encode_path_segment(&id.to_string())
         );
         let url = self.base_url.join(&path).map_err(|e| {

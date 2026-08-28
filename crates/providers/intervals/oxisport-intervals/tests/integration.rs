@@ -20,6 +20,12 @@ fn provider_for(server: &MockServer) -> IntervalsProvider {
     .expect("provider builds")
 }
 
+/// Base64 of `API_KEY:test-api-key` (username is the literal `API_KEY`).
+fn base64_credentials() -> String {
+    use base64::Engine as _;
+    base64::engine::general_purpose::STANDARD.encode("API_KEY:test-api-key")
+}
+
 const ACTIVITY_JSON: &str = r#"{
     "id": "i55610271",
     "name": "Morning ride",
@@ -43,15 +49,18 @@ async fn missing_api_key_is_rejected() {
 }
 
 #[tokio::test]
-async fn fetches_athlete_with_api_key_header() {
+async fn fetches_athlete_with_basic_auth() {
     let server = MockServer::start().await;
     Mock::given(method("GET"))
         .and(path("/athlete/0"))
-        .and(header("x-api-key", "test-api-key"))
+        .and(header(
+            "authorization",
+            &format!("Basic {}", base64_credentials()),
+        ))
         .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
-            "id": 2049151,
-            "first_name": "John",
-            "last_name": "Doe"
+            "id": "i2049151",
+            "firstname": "John",
+            "lastname": "Doe"
         })))
         .mount(&server)
         .await;
@@ -61,7 +70,7 @@ async fn fetches_athlete_with_api_key_header() {
         .await
         .expect("fetches athlete");
 
-    assert_eq!(athlete.id.as_str(), "2049151");
+    assert_eq!(athlete.id.as_str(), "i2049151");
     assert_eq!(athlete.provider, ProviderId::new("intervals"));
     assert_eq!(athlete.name.as_deref(), Some("John Doe"));
 }

@@ -2,6 +2,7 @@
 
 use std::time::Duration;
 
+use base64::Engine as _;
 use http::{HeaderMap, HeaderName, HeaderValue, Method};
 use serde::Serialize;
 use url::Url;
@@ -134,6 +135,23 @@ impl ClientBuilder {
         self
     }
 
+    /// Sets HTTP Basic authentication from `username` and `password`.
+    #[must_use]
+    pub fn basic_auth(mut self, username: impl AsRef<str>, password: impl AsRef<str>) -> Self {
+        let credentials = format!("{}:{}", username.as_ref(), password.as_ref());
+        let encoded = base64::engine::general_purpose::STANDARD.encode(credentials);
+        match HeaderValue::from_str(&format!("Basic {encoded}")) {
+            Ok(value) => {
+                self.default_headers
+                    .insert(http::header::AUTHORIZATION, value);
+            }
+            Err(_) => {
+                tracing::warn!("basic auth credentials are not valid header values; header omitted")
+            }
+        }
+        self
+    }
+
     /// Builds the client.
     pub fn build(self) -> Result<Client> {
         let mut builder = reqwest::Client::builder()
@@ -234,7 +252,12 @@ impl RequestBuilder {
         if let Some(media_type) = &self.media_type {
             request = request.header(http::header::CONTENT_TYPE, media_type.as_str());
         }
-        tracing::debug!(method = %self.method, url = %self.url, "sending request");
+        tracing::debug!(
+            method = %self.method,
+            url = %self.url,
+            headers = ?self.headers,
+            "sending request"
+        );
         let response = request.send().await.map_err(Error::transport)?;
         tracing::debug!(status = %response.status(), "request completed");
         Response::from_reqwest(response).await

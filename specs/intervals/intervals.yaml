@@ -10,11 +10,11 @@ types:
   - name: AthleteResponse
     fields:
       - name: id
-        type: uint64
-      - name: first_name
+        type: string
+      - name: firstname
         type: string
         optional: true
-      - name: last_name
+      - name: lastname
         type: string
         optional: true
       - name: display_name
@@ -57,7 +57,7 @@ endpoints:
     path: /athlete/{id}
     path_params:
       - name: id
-        type: uint64
+        type: string
     response: AthleteResponse
 
   - name: list_activities
@@ -65,7 +65,7 @@ endpoints:
     path: /athlete/{id}/activities
     path_params:
       - name: id
-        type: uint64
+        type: string
     query_params:
       - name: oldest
         type: string

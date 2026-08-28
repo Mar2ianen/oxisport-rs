@@ -43,7 +43,7 @@ impl ExampleClient {
         id: &str,
     ) -> std::result::Result<ActivityResponse, oxisport_core::Error> {
         let path = format!(
-            "/activities/{id}",
+            "activities/{id}",
             id = oxisport_runtime::util::encode_path_segment(&id.to_string())
         );
         let url = self.base_url.join(&path).map_err(|e| {
@@ -63,7 +63,7 @@ impl ExampleClient {
     pub async fn list_activities(
         &self,
     ) -> std::result::Result<Vec<ActivityResponse>, oxisport_core::Error> {
-        let path = "/activities";
+        let path = "activities";
         let url = self.base_url.join(&path).map_err(|e| {
             oxisport_core::Error::invalid_request(format!("invalid request URL: {e}"))
         })?;

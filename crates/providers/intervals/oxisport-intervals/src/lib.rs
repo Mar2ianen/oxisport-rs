@@ -9,8 +9,8 @@
 //!                   -> oxisport_core::{Activity, Athlete}
 //! ```
 //!
-//! Authentication uses the personal API key from
-//! <https://intervals.icu/settings>, sent as the `X-API-KEY` header.
+//! Authentication uses HTTP Basic auth with the personal API key from
+//! <https://intervals.icu/settings> (username `API_KEY`, password the key).
 //!
 //! Implemented capabilities: [`AthleteSource`] and [`ActivitySource`].
 //! Activity-file upload is provider-specific and exposed directly on
